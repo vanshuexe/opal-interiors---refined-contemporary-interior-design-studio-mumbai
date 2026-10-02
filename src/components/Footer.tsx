@@ -157,11 +157,11 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="mailto:Opalinterior05@gmail.com"
+                  href="mailto:Mansi@opalinterior.in"
                   className="flex items-center gap-2.5 text-[#757779] hover:text-[#C99933] transition-colors"
                 >
                   <Mail size={18} className="text-[#C99933] shrink-0" />
-                  <span>Opalinterior05@gmail.com</span>
+                  <span><span className="block text-xs text-[#757779]">Support</span>Mansi@opalinterior.in</span>
                 </a>
               </li>
             </ul>
