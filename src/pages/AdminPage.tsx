@@ -59,7 +59,7 @@ export const AdminPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Login Form State
-  const [username, setUsername] = useState('admin@opalinteriors.in');
+  const [username, setUsername] = useState('Mansi@opalinterior.in');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -88,7 +88,6 @@ export const AdminPage: React.FC = () => {
 
   // Settings State
   const [newPasscode, setNewPasscode] = useState('');
-  const [newPin, setNewPin] = useState('');
   const [settingsSuccess, setSettingsSuccess] = useState('');
 
   // Initial Load
@@ -123,11 +122,11 @@ export const AdminPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [lockoutRemaining]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
-    const res = loginWithCredentials(username, password, rememberMe);
+    const res = await loginWithCredentials(username, password, rememberMe);
     if (res.success && res.session) {
       setSession(res.session);
       setInquiries(getInquiries());
@@ -193,13 +192,12 @@ export const AdminPage: React.FC = () => {
     });
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPasscode || newPin) {
-      updateAdminCredentials(newPasscode || undefined, newPin || undefined);
+    if (newPasscode) {
+      await updateAdminCredentials(newPasscode);
       setSettingsSuccess('Security passkeys updated successfully.');
       setNewPasscode('');
-      setNewPin('');
       setTimeout(() => setSettingsSuccess(''), 4000);
     }
   };
@@ -295,7 +293,7 @@ export const AdminPage: React.FC = () => {
                       required
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="admin@opalinteriors.in"
+                      placeholder="Mansi@opalinterior.in"
                       className="w-full bg-[#0D1017] border border-white/15 focus:border-[#C99933] text-white text-sm rounded-lg px-4 py-3 outline-none transition-colors"
                     />
                     <User size={16} className="absolute right-3.5 top-3.5 text-slate-500" />
@@ -305,9 +303,8 @@ export const AdminPage: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs uppercase tracking-wider text-slate-400 font-medium">
-                      Passcode or 4-Digit PIN
+                      Password
                     </label>
-                    <span className="text-[10px] text-slate-500 font-mono">PIN: 2019</span>
                   </div>
                   <div className="relative">
                     <input
@@ -315,7 +312,7 @@ export const AdminPage: React.FC = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter passkey or PIN"
+                      placeholder="Enter password"
                       className="w-full bg-[#0D1017] border border-white/15 focus:border-[#C99933] text-white text-sm rounded-lg px-4 py-3 outline-none transition-colors font-mono"
                     />
                     <button
@@ -1103,19 +1100,6 @@ export const AdminPage: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1 font-medium">
-                    New 4-Digit Quick PIN
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={newPin}
-                    onChange={(e) => setNewPin(e.target.value)}
-                    placeholder="e.g. 2019"
-                    className="w-full bg-[#0D1017] border border-white/15 focus:border-[#C99933] text-white text-xs rounded-lg px-4 py-3 outline-none font-mono"
-                  />
-                </div>
 
                 <div className="pt-2">
                   <button

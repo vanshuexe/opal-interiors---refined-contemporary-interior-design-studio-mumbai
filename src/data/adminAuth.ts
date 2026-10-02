@@ -11,26 +11,28 @@ const CREDS_KEY = 'opal_admin_credentials';
 const ATTEMPTS_KEY = 'opal_admin_failed_attempts';
 
 interface StoredCredentials {
+  version: number;
   allowedUsers: { username: string; name: string; role: 'Principal Designer' | 'Partner' | 'Administrator' }[];
   passcodeHash: string; // Stored passkey
   quickPin: string; // 4-digit quick pin
 }
 
 const DEFAULT_CREDS: StoredCredentials = {
+  version: 2,
   allowedUsers: [
-    { username: 'mansi@opalinteriors.in', name: 'Mansi Sharma', role: 'Principal Designer' },
-    { username: 'pushapraj@opalinteriors.in', name: 'Pushapraj Sharma', role: 'Partner' },
-    { username: 'admin@opalinteriors.in', name: 'Studio Administrator', role: 'Administrator' },
+    { username: 'Mansi@opalinterior.in', name: 'Mansi Sharma', role: 'Principal Designer' },
   ],
-  passcodeHash: 'OpalStudio2019#',
-  quickPin: '2019',
+  passcodeHash: '499fd3f7c091ad5d45eb3bdd280536498a9a4cfcc5bc93ecbdc0da9065fba808',
+  quickPin: '',
 };
 
 export const getAdminCredentials = (): StoredCredentials => {
   try {
     const raw = localStorage.getItem(CREDS_KEY);
-    if (!raw) {
+    if (!raw || JSON.parse(raw).version !== DEFAULT_CREDS.version) {
       localStorage.setItem(CREDS_KEY, JSON.stringify(DEFAULT_CREDS));
+      localStorage.removeItem(AUTH_KEY);
+      localStorage.removeItem(ATTEMPTS_KEY);
       return DEFAULT_CREDS;
     }
     return JSON.parse(raw);
@@ -39,10 +41,14 @@ export const getAdminCredentials = (): StoredCredentials => {
   }
 };
 
-export const updateAdminCredentials = (newPasscode?: string, newPin?: string) => {
+const hashPassword = async (password: string): Promise<string> => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+export const updateAdminCredentials = async (newPasscode?: string) => {
   const current = getAdminCredentials();
-  if (newPasscode) current.passcodeHash = newPasscode;
-  if (newPin) current.quickPin = newPin;
+  if (newPasscode) current.passcodeHash = await hashPassword(newPasscode);
   localStorage.setItem(CREDS_KEY, JSON.stringify(current));
 };
 
@@ -74,6 +80,7 @@ export const resetFailedAttempts = () => {
 
 export const getAdminSession = (): AdminSession | null => {
   try {
+    getAdminCredentials();
     const raw = localStorage.getItem(AUTH_KEY);
     if (!raw) return null;
     const session: AdminSession = JSON.parse(raw);
@@ -87,30 +94,28 @@ export const getAdminSession = (): AdminSession | null => {
   }
 };
 
-export const loginWithCredentials = (
+export const loginWithCredentials = async (
   identifier: string,
   secret: string,
   rememberMe: boolean = true
-): { success: boolean; error?: string; session?: AdminSession } => {
+): Promise<{ success: boolean; error?: string; session?: AdminSession }> => {
+  const creds = getAdminCredentials();
   const attempts = getFailedAttemptsInfo();
   if (attempts.lockUntil > Date.now()) {
     const remainingSec = Math.ceil((attempts.lockUntil - Date.now()) / 1000);
     return { success: false, error: `Account locked due to too many failed attempts. Try again in ${remainingSec}s.` };
   }
 
-  const creds = getAdminCredentials();
   const trimmedId = identifier.trim().toLowerCase();
-  const trimmedSecret = secret.trim();
 
   // Match username
   const matchedUser = creds.allowedUsers.find(
-    (u) => u.username.toLowerCase() === trimmedId || u.name.toLowerCase().includes(trimmedId) || trimmedId === 'admin'
+    (u) => u.username.toLowerCase() === trimmedId
   );
 
-  const isPinMatch = trimmedSecret === creds.quickPin;
-  const isPasscodeMatch = trimmedSecret === creds.passcodeHash;
+  const isPasscodeMatch = await hashPassword(secret) === creds.passcodeHash;
 
-  if (matchedUser && (isPinMatch || isPasscodeMatch)) {
+  if (matchedUser && isPasscodeMatch) {
     resetFailedAttempts();
     const durationHours = rememberMe ? 24 : 4;
     const session: AdminSession = {
